@@ -1,0 +1,9 @@
+opencv-python
+numpy
+torch
+torchvision
+facenet-pytorch
+scipy
+sqlite3
+pillow
+tk
