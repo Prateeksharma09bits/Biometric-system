@@ -1,9 +1,9 @@
-opencv-python
-numpy
-torch
-torchvision
-facenet-pytorch
-scipy
-sqlite3
-pillow
+opencv-python==4.8.1.78
+numpy==1.26.4
+torch==2.1.0+cpu
+torchvision==0.16.0+cpu
+torchaudio==2.1.0+cpu
+facenet-pytorch==2.5.3
+scipy==1.11.4
+pillow==9.5.0
 tk

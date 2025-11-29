@@ -14,29 +14,20 @@ mtcnn = MTCNN(keep_all=False)  # No 'landmarks' argument
 resnet = InceptionResnetV1(pretrained='vggface2').eval()
 
 def extract_face_embedding(image):
-    """Extracts face embeddings using FaceNet with preprocessing."""
+    """Extract high-accuracy aligned face embeddings."""
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    boxes, probs = mtcnn.detect(image_rgb)
-    landmarks = mtcnn(image_rgb)  # Get landmarks separately
 
-    
-    if boxes is None:
-        return None, None  # No face detected
-    
-    x1, y1, x2, y2 = map(int, boxes[0])
-    face = image_rgb[y1:y2, x1:x2]
-    
-    if face.shape[0] == 0 or face.shape[1] == 0:
-        return None, None  # Avoid zero-sized images
-    
-    face = cv2.resize(face, (160, 160))
-    face = np.transpose(face, (2, 0, 1))
-    face = torch.tensor(face).float().unsqueeze(0) / 255.0
-    
+    # Get aligned face from MTCNN
+    face = mtcnn(image_rgb)
+    if face is None:
+        return None
+
+    face = face.unsqueeze(0)  # Add batch dimension
     with torch.no_grad():
         embedding = resnet(face)
-    
-    return embedding.numpy().flatten(), landmarks[0]
+
+    return embedding.numpy().flatten()
+
 
 def fetch_registered_faces():
     """Fetch stored face embeddings from the database."""
@@ -128,7 +119,7 @@ def recognize_face():
     cv2.destroyAllWindows()
 
     # Proceed with face recognition
-    embedding, landmarks = extract_face_embedding(frame)
+    embedding = extract_face_embedding(frame)
     if embedding is None:
         messagebox.showerror("Error", "No face detected!")
         return
@@ -144,7 +135,7 @@ def recognize_face():
             best_match = name
             best_score = similarity
 
-    if best_match and best_score < 0.5:  # Threshold for face match
+    if best_match and best_score < 0.35:  # Threshold for face match
         messagebox.showinfo("Access Granted", f"✅ Welcome, {best_match}!")
     else:
         messagebox.showerror("Access Denied", "❌ Face Not Recognized!")

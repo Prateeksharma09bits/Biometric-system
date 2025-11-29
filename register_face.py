@@ -6,33 +6,27 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from facenet_pytorch import MTCNN, InceptionResnetV1
 from PIL import Image, ImageTk
+import os
 
 # Initialize models
 mtcnn = MTCNN(keep_all=False)
 resnet = InceptionResnetV1(pretrained='vggface2').eval()
 
 def extract_face_embedding(image):
-    """Extracts face embeddings from an image frame."""
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # Convert to RGB
-    boxes, _ = mtcnn.detect(image_rgb)
-    
-    if boxes is None:
-        return None  # No face detected
-    
-    x1, y1, x2, y2 = map(int, boxes[0])
-    face = image_rgb[y1:y2, x1:x2]
-    
-    if face.shape[0] == 0 or face.shape[1] == 0:
+    """Extract high-accuracy aligned face embeddings."""
+    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    # MTCNN returns aligned 160×160 face
+    face = mtcnn(image_rgb)
+    if face is None:
         return None
-    
-    face = cv2.resize(face, (160, 160))
-    face = np.transpose(face, (2, 0, 1))
-    face = torch.tensor(face).float().unsqueeze(0) / 255.0  # Normalize
-    
+
+    face = face.unsqueeze(0)  # Add batch dimension
     with torch.no_grad():
         embedding = resnet(face)
-    
+
     return embedding.numpy().tobytes()
+
 
 def save_to_database(user_id, name, embedding):
     """Saves the extracted embedding into the database."""
@@ -55,20 +49,36 @@ def upload_image():
         messagebox.showerror("Error", "Please enter User ID and Name.")
         return
 
-    file_path = filedialog.askopenfilename(title="Select an Image",
-                                           filetypes=[("Image Files", "*.jpg;*.jpeg;*.png")])
+    file_path = filedialog.askopenfilename(
+        title="Select an Image",
+        filetypes=[("Image Files", "*.jpg;*.jpeg;*.png")]
+    )
     
     if not file_path:
         messagebox.showerror("Error", "No file selected.")
         return
     
+    # Read the selected image
     image = cv2.imread(file_path)
+
+    # ---- NEW FEATURE: SAVE IMAGE IN FOLDER ----
+    folder_name = f"{user_id}-{name}".replace(" ", "_")  # avoid spaces
+    save_dir = os.path.join("images", folder_name)
+    os.makedirs(save_dir, exist_ok=True)
+
+    save_path = os.path.join(save_dir, "original.jpg")
+    cv2.imwrite(save_path, image)
+
+    # ------------------------------------------
+
     embedding = extract_face_embedding(image)
     
     if embedding is None:
         messagebox.showerror("Error", "No face detected in the selected image.")
     else:
         save_to_database(user_id, name, embedding)
+        messagebox.showinfo("Saved", f"Image saved at: {save_path}")
+
 
 def exit_app():
     """Closes the application."""

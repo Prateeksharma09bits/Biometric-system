@@ -1,4 +1,6 @@
 import sqlite3
+import os
+import shutil 
 
 DB_NAME = "face_database.db"
 
@@ -22,7 +24,7 @@ def execute_query(query, params=None, fetch=False):
         print(f"❌ Unexpected error: {e}")
 
 def create_table():
-    """Creates the users table if it doesn't exist."""
+    """Creates the users table if it doesn't exist and ensures images folder exists."""
     query = '''
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
@@ -32,6 +34,13 @@ def create_table():
     '''
     execute_query(query)
     print("✅ Table 'users' is ready.")
+
+    # Create images folder if it doesn't exist
+    if not os.path.exists("images"):
+        os.makedirs("images")
+        print("✅ 'images' folder created.")
+    else:
+        print("ℹ️ 'images' folder already exists.")
 
 def insert_user(user_id, name, embedding):
     """Inserts a new user into the table."""
@@ -53,9 +62,23 @@ def show_users():
 
 def delete_user(user_id):
     """Deletes a user by user_id."""
+    # Get user name first (required to delete folder)
+    query = "SELECT name FROM users WHERE user_id = ?"
+    result = execute_query(query, (int(user_id),), fetch=True)
+
+    if not result:
+        print("⚠️ User not found.")
+        return
+
+    name = result[0][0]
+
+    # Delete from DB
     query = "DELETE FROM users WHERE user_id = ?"
     execute_query(query, (int(user_id),))
     print(f"✅ User ID {user_id} deleted.")
+
+    # Now delete folder
+    delete_user_folder(user_id, name)
 
 def drop_table():
     """Drops the users table (CAUTION: Deletes all records)."""
@@ -63,6 +86,14 @@ def drop_table():
     if confirm == "yes":
         execute_query("DROP TABLE IF EXISTS users")
         print(" Table 'users' deleted.")
+
+        # NEW: Delete complete images/ folder
+        if os.path.exists("images"):
+            shutil.rmtree("images")
+            print("🗑️ Deleted entire 'images' folder.")
+        else:
+            print("⚠️ No 'images' folder exists.")
+
     else:
         print(" Action canceled.")
 
