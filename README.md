@@ -1,4 +1,5 @@
 -------------------Face Recognition System--------------------
+
 A complete Face Recognition System built using Python, OpenCV, FaceNet, SQLite, and Tkinter. It consists of:
 
 Database Management (intialise_db.py) – Handles the user database. 
