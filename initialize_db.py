@@ -60,6 +60,16 @@ def show_users():
     else:
         print("\n⚠️ No users found in the database.")
 
+def delete_user_folder(user_id, name):
+    """Deletes the user's image folder based on user_id and name."""
+    folder_path = os.path.join("images", f"{user_id}-{name}")
+
+    if os.path.exists(folder_path):
+        shutil.rmtree(folder_path)
+        print(f"🗑️ Deleted folder: {folder_path}")
+    else:
+        print(f"⚠️ No folder found for user {user_id}-{name}.")
+
 def delete_user(user_id):
     """Deletes a user by user_id."""
     # Get user name first (required to delete folder)
